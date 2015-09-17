@@ -1,5 +1,7 @@
+#!/usr/bin/env node
+
 /*
- * Copyright 2012 Donn Felker
+ * Copyright 2015 Donn Felker, Zeb Deos, Donnie West
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +21,24 @@ var wrench = require('wrench'),
     spawn = require('child_process').spawn,
     fs = require('fs'),
     async = require('async'),
-    zip = require("node-native-zip");
+    program = require('commander');
+
 /*
  * Project generator route. 
  * This entire route is super brute force and rather naive. However, it works and is easy to follow. 
  * TODO: Possible improvements include doing more async calls with the fs module since this uses the async.js
  * lib it shouldn't be too bad to impelement. 
 */
-exports.index = function(req, res) {
+
+program
+    .version('0.0.1')
+    .option('-p --package-name [value]', 'Package name of Project')
+    .option('-n --application-name [value]', 'Name of package')
+    .option('-i --input-directory <path>', 'Input Directory')
+    .option('-o --output-directory <path>', 'Output Directory')
+    .parse(process.argv);
+
+convert = function() {
 
     // 1. Create a temporary file(s) location. 
     // 2. Rename the directories accordingly. 
@@ -37,21 +49,25 @@ exports.index = function(req, res) {
 
     console.log(process.env.PWD);
 
-    var appName = req.query.appName;
-    var packageName = req.query.packageName;
+    var appName = program.applicationName;
+    var packageName = program.packageName;
 
     console.log("App Name:" + appName);
     console.log("Package Name:" + packageName);
 
-    // Android Bootstrap ource directory
-    var sourceDir = process.env.PWD + '/android-bootstrap';
+    // Android Bootstrap source directory
+    var sourceDir = program.inputDirectory;
     
     // Temporary locationwhere the users project will be generated.
     var destDir = process.env.PWD + '/tmp/' + packageName; 
 
+    //Final Location where project is generated
+    var finalDir = program.outputDirectory
+
     console.log("sourceDir: " + sourceDir);
     console.log("destDir: " + destDir); 
-
+    console.log("sourceDir: " + finalDir);
+    
     // Copy the files to temp directory. 
     wrench.copyDirSyncRecursive(sourceDir, destDir);
 
@@ -77,40 +93,9 @@ exports.index = function(req, res) {
         createSourceDirectories(destDir, packageName);
         copySourceDirectories(destDir, packageName); 
         removeBootstrapDirectories(destDir); 
-        
-        sendContentAsZip(destDir, res);
-
+        wrench.copyDirSyncRecursive(destDir, finalDir);
       }
     }); 
-}
-
-function sendContentAsZip(destDir, res) {
-  
-  var fileObjects = getFileObjectsFrom(destDir, wrench.readdirSyncRecursive(destDir));
-  
-  var archive = new zip();
-  archive.addFiles(fileObjects, function(err) {
-    if(err) {
-      console.log(err);
-      res.statusCode = 500;
-      res.end(); 
-    } else {
-      
-      archive.toBuffer(function(buff) {
-        
-        res.contentType('zip');
-        res.setHeader('Content-disposition', 'attachment; filename=android-bootstrap.zip');
-        res.send(buff);
-        res.end();        
-
-        wrench.rmdirSyncRecursive(destDir, false)
-      }); 
-
-      
-    }
-      
-  });
- 
 }
 
 function getFileObjectsFrom(destDir, files) {
@@ -276,3 +261,5 @@ function replaceProguardValues(fileContents, newPackageName) {
 
   return fileContents.replace(valueToFind, newValue);
 }
+
+convert();
