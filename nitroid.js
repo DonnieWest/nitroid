@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 /*
- * Copyright 2015 Donn Felker, Zeb Deos, Donnie West
+ * Copyright 2012 Donn Felker
+ * Copyright 2015 Zeb DeOs, Donnie West
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
